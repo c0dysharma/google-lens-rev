@@ -30,9 +30,9 @@ async function fetchHTML(url) {
   }, prerender: true  })
 
   // save the result.html result in a file
-  const tempFilePath = './result.html';
-  await fsPromises.writeFile(tempFilePath, result.html);
-  console.log(`HTML saved to ${tempFilePath}`);
+  // const tempFilePath = './result.html';
+  // await fsPromises.writeFile(tempFilePath, result.html);
+  // console.log(`HTML saved to ${tempFilePath}`);
 
   // close the browser context after it's used
   await getBrowserless((browser) => browser.destroyContext())
@@ -45,15 +45,36 @@ async function scrape(url) {
     const html = await fetchHTML(lensUrl)
     const $ = cheerio.load(html);
 
-    const imageUrls = [];
-    $('div.Me0cf img').each((index, element) => {
-      const imgUrl = $(element).attr('src');
-      if (imgUrl && isValidUrl(imgUrl)) {
-        imageUrls.push(imgUrl);
-      }
-    });
+    const imageColumns = $('div.aah4tc > div')
 
-    return imageUrls;
+    const imagesMatrix = []
+    let maxLengthColumn = 0;
+
+    for(const column of imageColumns) {
+      const images = $(column).find('div.Me0cf img');
+      const imageUrls = [];
+
+      images.each((index, element) => {
+        const imgUrl = $(element).attr('src');
+        if (imgUrl && isValidUrl(imgUrl)) {
+          imageUrls.push(imgUrl);
+        }
+      });
+      imagesMatrix.push(imageUrls);
+
+      maxLengthColumn = Math.max(imageUrls.length, maxLengthColumn)
+    }
+
+    const resultImgesInOrder = [];
+    for (let i = 0; i < maxLengthColumn; i++) {
+      for(const column of imagesMatrix){
+        if(i<column.length){
+          resultImgesInOrder.push(column[i]) 
+        }
+      }
+    }
+
+    return resultImgesInOrder;
   } catch (error) {
     console.error(`Error scraping the URL: ${error}`);
     return null;
